@@ -112,7 +112,9 @@ log "waiting for the app to boot (installs Docker + builds image, ~3-5 min)…"
 URL="http://${PUBLIC_IP}:5001"
 code=000
 for i in $(seq 1 60); do
-  code="$(curl -s -o /dev/null -m 4 -w '%{http_code}' "$URL/" 2>/dev/null)"; code="${code:-000}"
+  # NB: keep the '|| code=000' OUTSIDE the substitution — under `set -e` a failed
+  # curl (exit 7, app not up yet) would otherwise abort the whole script.
+  code=$(curl -s -o /dev/null -m 4 -w '%{http_code}' "$URL/" 2>/dev/null) || code=000
   if [[ "$code" != "000" ]]; then ok "app responded (HTTP $code) after ~$((i*15))s"; break; fi
   sleep 15
 done
