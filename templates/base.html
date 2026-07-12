@@ -50,6 +50,14 @@
             🛒 Pantry
           </a>
         </li>
+        <li>
+          <a
+            href="{{ url_for('buddies.buddies_page') }}"
+            class="{% if request.blueprint == 'buddies' %}active{% endif %}"
+          >
+            👥 Buddies
+          </a>
+        </li>
         <li class="nav-user">
           <span class="nav-username">👤 {{ current_user.username }}</span>
           <button class="btn-dark-mode" id="darkModeBtn" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>

@@ -1,0 +1,169 @@
+{% extends "base.html" %} {% block title %}Cooking Buddies — Smart Cookbook{% endblock
+%} {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/recipes.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/buddies.css') }}" />
+{% endblock %} {% block content %}
+<div class="page-header">
+  <div>
+    <h1>👥 Cooking Buddies</h1>
+    <p class="page-subtitle">People you cook with and share recipes with</p>
+  </div>
+  <button class="btn-primary" onclick="openBuddyModal()">+ Add Buddy</button>
+</div>
+
+<div class="alert" id="alert" style="display: none"></div>
+
+<div class="buddies-grid" id="buddiesGrid">
+  {% if not buddies %}
+  <div class="empty-state" id="emptyState" style="grid-column: 1 / -1">
+    <div class="empty-emoji">👥</div>
+    <h2>No cooking buddies yet</h2>
+    <p>Add friends and family so you can share recipes with them by email.</p>
+    <button class="btn-primary mt-8" onclick="openBuddyModal()">Add your first buddy</button>
+  </div>
+  {% else %}
+  <div id="emptyState" style="display: none"></div>
+  {% endif %}
+  {% for buddy in buddies %}
+  <div class="buddy-card" data-id="{{ buddy.id }}">
+    <img
+      class="buddy-avatar"
+      src="{{ buddy.picture_url or url_for('static', filename='img/buddy-default.svg') }}"
+      alt="{{ buddy.name }}"
+      onerror="this.src='{{ url_for('static', filename='img/buddy-default.svg') }}'"
+    />
+    <div class="buddy-info">
+      <p class="buddy-name">{{ buddy.name }}</p>
+      <p class="buddy-email">{{ buddy.email }}</p>
+    </div>
+    <div class="buddy-actions">
+      <button
+        class="btn-secondary btn-sm"
+        onclick='openBuddyModal({{ buddy | tojson }})'
+      >
+        Edit
+      </button>
+      <button
+        class="btn-ghost btn-sm"
+        onclick="deleteBuddy('{{ buddy.id }}', this)"
+      >
+        Delete
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if buddies %}
+<div class="pantry-footer">
+  <span class="pantry-count" id="buddyCount"
+    >{{ buddies|length }} buddy{{ 'ies' if buddies|length != 1 else '' }}</span
+  >
+</div>
+{% endif %}
+
+<section class="share-recipe-section">
+  <h2 class="share-recipe-title">Share a recipe</h2>
+  <p class="page-subtitle">Browse the full cookbook and email a recipe to your buddies.</p>
+
+  <div class="share-recipe-form">
+    <div class="share-recipe-row">
+      <div class="share-recipe-selected" id="selectedRecipeDisplay">
+        <span class="sidebar-hint">No recipe selected</span>
+      </div>
+      <a
+        class="btn-secondary"
+        href="{{ url_for('recipes.list_recipes', select=1, return=url_for('buddies.buddies_page')) }}"
+      >
+        Browse recipes
+      </a>
+    </div>
+
+    <div class="buddy-form-group">
+      <label for="shareSubjectInput">Subject</label>
+      <input
+        type="text"
+        id="shareSubjectInput"
+        placeholder="Recipe: Apple Pie"
+      />
+    </div>
+
+    <div class="buddy-form-group">
+      <label for="shareNoteInput">Personal note (optional)</label>
+      <textarea
+        id="shareNoteInput"
+        rows="3"
+        placeholder="Hope you enjoy this one!"
+      ></textarea>
+    </div>
+
+    <p class="sidebar-hint">Send to:</p>
+    {% if buddies %}
+    <div class="buddy-share-list" id="shareBuddyList">
+      {% for buddy in buddies %}
+      <div class="buddy-share-item">
+        <label>
+          <input type="checkbox" name="shareBuddyPick" value="{{ buddy.id }}" />
+          <img
+            src="{{ buddy.picture_url or url_for('static', filename='img/buddy-default.svg') }}"
+            alt=""
+            onerror="this.src='{{ url_for('static', filename='img/buddy-default.svg') }}'"
+          />
+          <span>{{ buddy.name }} <small>{{ buddy.email }}</small></span>
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="sidebar-hint">Add a cooking buddy above before sending recipes.</p>
+    {% endif %}
+
+    <div class="share-recipe-actions">
+      <button
+        class="btn-primary"
+        type="button"
+        onclick="sendRecipeEmail()"
+        {% if not buddies %}disabled{% endif %}
+      >
+        Send recipe email
+      </button>
+    </div>
+  </div>
+</section>
+
+<div class="buddy-modal-backdrop" id="buddyModal">
+  <div class="buddy-modal" role="dialog" aria-labelledby="buddyModalTitle">
+    <h2 id="buddyModalTitle">Add Buddy</h2>
+    <div class="buddy-form-group">
+      <label for="buddyNameInput">Name</label>
+      <input type="text" id="buddyNameInput" placeholder="Sarah Chen" maxlength="100" />
+    </div>
+    <div class="buddy-form-group">
+      <label for="buddyEmailInput">Email</label>
+      <input type="email" id="buddyEmailInput" placeholder="sarah@example.com" />
+    </div>
+    <div class="buddy-form-group">
+      <label for="buddyPictureInput">Picture URL (optional)</label>
+      <input
+        type="url"
+        id="buddyPictureInput"
+        placeholder="https://example.com/photo.jpg"
+      />
+      <div class="buddy-preview">
+        <img
+          id="buddyPreviewImg"
+          src="{{ url_for('static', filename='img/buddy-default.svg') }}"
+          alt="Preview"
+        />
+        <span class="sidebar-hint">Live preview</span>
+      </div>
+    </div>
+    <div class="buddy-modal-actions">
+      <button class="btn-ghost" type="button" onclick="closeBuddyModal()">Cancel</button>
+      <button class="btn-primary" type="button" onclick="saveBuddy()">Save</button>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script src="{{ url_for('static', filename='js/buddies.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Manage Image — {{ title }} — Smart Cookbook{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/recipes.css') }}" />
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('recipes.view_recipe', slug=slug) }}" class="back-link">← {{ title }}</a>
+    <h1>🖼 Manage Recipe Image</h1>
+    <p class="page-subtitle">{{ title }}</p>
+  </div>
+</div>
+
+<div class="alert" id="imageAlert" style="display: none"></div>
+
+<section class="form-section image-manage-section">
+  <div class="image-manage-preview" id="imageManagePreview">
+    {% if image_url %}
+    <img
+      id="imagePreview"
+      class="recipe-detail-image"
+      src="{{ image_url }}"
+      alt="{{ title }}"
+    />
+    {% elif image_status == 'pending' %}
+    <div id="imagePreview">
+      {% include "recipes/_ai_image_loader.html" %}
+    </div>
+    {% else %}
+    <div id="imagePreview" class="image-placeholder">No image</div>
+    {% endif %}
+  </div>
+  <p id="imageStatusLine" class="image-status-line{% if image_status != 'pending' %} hidden{% endif %}">
+    AI is composing your recipe photo — it will appear here automatically.
+  </p>
+
+  {% if gemini_enabled %}
+  <div class="form-group">
+    <button type="button" class="btn-primary" id="generateImageBtn">✨ Generate image</button>
+    <p class="form-hint">Create a new AI food photo with optional styling notes.</p>
+  </div>
+  {% endif %}
+
+  <div class="form-group">
+    <label for="imageUrlInput">Image URL</label>
+    <div class="image-url-row">
+      <input
+        type="url"
+        id="imageUrlInput"
+        placeholder="https://example.com/photo.jpg"
+        value="{{ image_url or '' }}"
+      />
+      <button type="button" class="btn-secondary" id="setUrlBtn">Set from URL</button>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="imageFileInput">Upload image</label>
+    <div class="image-url-row">
+      <input type="file" id="imageFileInput" accept="image/png,image/jpeg,image/webp" />
+      <button type="button" class="btn-secondary" id="uploadBtn">Upload image</button>
+    </div>
+    <p class="form-hint">JPG, PNG, or WebP — max 5 MB</p>
+  </div>
+
+  <div class="form-actions">
+    <button type="button" class="btn-danger" id="removeImageBtn">Remove image</button>
+    <a href="{{ url_for('recipes.view_recipe', slug=slug) }}" class="btn-secondary">Done</a>
+  </div>
+</section>
+
+{% if gemini_enabled %}
+<div id="generateImageModal" class="image-modal hidden" aria-hidden="true">
+  <div class="image-modal__backdrop" id="generateModalBackdrop"></div>
+  <div class="image-modal__panel" role="dialog" aria-modal="true" aria-labelledby="generateModalTitle">
+    <h2 id="generateModalTitle" class="image-modal__title">Generate recipe photo</h2>
+    <p class="image-modal__text">
+      Add optional styling notes and the AI will incorporate your touch into the picture.
+    </p>
+    <label class="image-modal__label" for="generateInstructions">Additional instructions (optional)</label>
+    <textarea
+      id="generateInstructions"
+      class="image-modal__input"
+      rows="4"
+      maxlength="500"
+      placeholder="e.g. rustic wooden table, warm evening light, sprinkle of powdered sugar…"
+    ></textarea>
+    <div class="image-modal__actions">
+      <button type="button" class="btn-secondary" id="cancelGenerateBtn">Cancel</button>
+      <button type="button" class="btn-primary" id="confirmGenerateBtn">Generate picture</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/recipes.js') }}"></script>
+<script>
+  initRecipeImageManager("{{ slug }}", {{ title | tojson }});
+</script>
+{% endblock %}

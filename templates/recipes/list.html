@@ -1,48 +1,86 @@
 {% extends "base.html" %}
-{% block title %}Recipes — Smart Cookbook{% endblock %}
+{% block title %}{% if select_mode %}Select a recipe{% else %}Recipes{% endif %} — Smart Cookbook{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/recipes.css') }}" />
 {% endblock %}
 
 {% block content %}
+{% if select_mode %}
+<div class="select-mode-banner">
+  <div>
+    <strong>Select a recipe</strong>
+    <p class="page-subtitle">Choose a recipe to share with your cooking buddies.</p>
+  </div>
+  <a href="{{ return_url }}" class="btn-ghost">Cancel</a>
+</div>
+{% endif %}
+
 <div class="page-header">
   <div>
-    <h1>📖 Recipes</h1>
+    <h1>{% if select_mode %}📧 Pick a recipe{% else %}📖 Recipes{% endif %}</h1>
     <p class="page-subtitle">
-      {{ recipes|length }} recipe{{ 's' if recipes|length != 1 else '' }} in your cookbook
+      {{ total }} recipe{{ 's' if total != 1 else '' }} in your cookbook
+      {% if total_pages > 1 %} · page {{ page }} of {{ total_pages }}{% endif %}
     </p>
   </div>
+  {% if not select_mode %}
   <div class="page-header-actions">
-    <a href="{{ url_for('recipes.upload_recipe_page') }}" class="btn-secondary">📄 Upload Recipe</a>
+    <button type="button" class="btn-secondary" id="uploadRecipeBtn">📄 Upload Recipe</button>
     <a href="{{ url_for('recipes.new_recipe') }}" class="btn-primary">+ Add Recipe</a>
   </div>
+  {% endif %}
 </div>
 
-{% if not recipes %}
+<form class="recipe-search-bar" method="get" action="{{ url_for('recipes.list_recipes') }}">
+  {% if select_mode %}
+  <input type="hidden" name="select" value="1" />
+  <input type="hidden" name="return" value="{{ return_url }}" />
+  {% endif %}
+  <input type="hidden" name="sort" value="{{ current_sort }}" />
+  <input
+    type="search"
+    name="q"
+    value="{{ current_query }}"
+    placeholder="Search by name or tag… (#dessert, bread for tags only)"
+    autocomplete="off"
+  />
+  <button type="submit" class="btn-secondary">Search</button>
+</form>
+
+{% if not recipes and not (favorite_recipes if not select_mode else []) %}
 <div class="empty-state">
   <div class="empty-emoji">📝</div>
-  <h2>No recipes yet</h2>
-  <p>Start building your cookbook by adding your first recipe.</p>
+  <h2>{% if current_query %}No matching recipes{% else %}No recipes yet{% endif %}</h2>
+  <p>
+    {% if current_query %}
+    Try a different search term.
+    {% elif select_mode %}
+    No recipes are available to share yet.
+    {% else %}
+    Start building your cookbook by adding your first recipe.
+    {% endif %}
+  </p>
+  {% if not select_mode and not current_query %}
   <a href="{{ url_for('recipes.new_recipe') }}" class="btn-primary">Add Your First Recipe</a>
+  {% endif %}
 </div>
 
 {% else %}
 
-<!-- Sort bar -->
 <div class="sort-bar">
   <span class="sort-label">Sort by:</span>
   <div class="sort-options">
-    <a href="?sort=latest"  class="sort-btn {% if current_sort == 'latest' %}sort-btn--active{% endif %}">Latest</a>
-    <a href="?sort=oldest"  class="sort-btn {% if current_sort == 'oldest' %}sort-btn--active{% endif %}">Oldest</a>
-    <a href="?sort=az"      class="sort-btn {% if current_sort == 'az'     %}sort-btn--active{% endif %}">A → Z</a>
-    <a href="?sort=za"      class="sort-btn {% if current_sort == 'za'     %}sort-btn--active{% endif %}">Z → A</a>
+    <a href="{{ url_for('recipes.list_recipes', sort='latest', q=current_query or none, page=1, select=1 if select_mode else none, return=return_url if select_mode else none) }}" class="sort-btn {% if current_sort == 'latest' %}sort-btn--active{% endif %}">Latest</a>
+    <a href="{{ url_for('recipes.list_recipes', sort='oldest', q=current_query or none, page=1, select=1 if select_mode else none, return=return_url if select_mode else none) }}" class="sort-btn {% if current_sort == 'oldest' %}sort-btn--active{% endif %}">Oldest</a>
+    <a href="{{ url_for('recipes.list_recipes', sort='az', q=current_query or none, page=1, select=1 if select_mode else none, return=return_url if select_mode else none) }}" class="sort-btn {% if current_sort == 'az' %}sort-btn--active{% endif %}">A → Z</a>
+    <a href="{{ url_for('recipes.list_recipes', sort='za', q=current_query or none, page=1, select=1 if select_mode else none, return=return_url if select_mode else none) }}" class="sort-btn {% if current_sort == 'za' %}sort-btn--active{% endif %}">Z → A</a>
   </div>
 </div>
 
-{% set fav_recipes   = recipes | selectattr('slug', 'in', favorites) | list %}
-{% set other_recipes = recipes | rejectattr('slug', 'in', favorites) | list %}
+{% if not select_mode %}
+{% set fav_recipes = favorite_recipes %}
+{% set other_recipes = recipes %}
 
-<!-- Favourites section -->
 {% if fav_recipes %}
 <section class="recipes-section">
   <h2 class="recipes-section-title">⭐ Favourites</h2>
@@ -54,7 +92,6 @@
 </section>
 {% endif %}
 
-<!-- All / remaining recipes -->
 <section class="recipes-section">
   {% if fav_recipes %}<h2 class="recipes-section-title">All Recipes</h2>{% endif %}
   {% if other_recipes %}
@@ -64,22 +101,58 @@
     {% endfor %}
   </div>
   {% elif not fav_recipes %}
-  <p class="text-muted">No recipes found.</p>
+  <div class="recipe-grid">
+    {% for recipe in recipes %}
+    {% include "recipes/_card.html" %}
+    {% endfor %}
+  </div>
   {% endif %}
 </section>
 
+{% else %}
+<section class="recipes-section">
+  <div class="recipe-grid">
+    {% for recipe in recipes %}
+    {% include "recipes/_card.html" %}
+    {% endfor %}
+  </div>
+</section>
 {% endif %}
+
+{% if total_pages > 1 %}
+<nav class="pagination" aria-label="Recipe pages">
+  {% if page > 1 %}
+  <a class="pagination-btn" href="{{ url_for('recipes.list_recipes', sort=current_sort, q=current_query or none, page=page - 1, select=1 if select_mode else none, return=return_url if select_mode else none) }}">← Previous</a>
+  {% else %}
+  <span class="pagination-btn pagination-btn--disabled">← Previous</span>
+  {% endif %}
+
+  <span class="pagination-info">Page {{ page }} of {{ total_pages }}</span>
+
+  {% if page < total_pages %}
+  <a class="pagination-btn" href="{{ url_for('recipes.list_recipes', sort=current_sort, q=current_query or none, page=page + 1, select=1 if select_mode else none, return=return_url if select_mode else none) }}">Next →</a>
+  {% else %}
+  <span class="pagination-btn pagination-btn--disabled">Next →</span>
+  {% endif %}
+</nav>
+{% endif %}
+
+{% endif %}
+
+{% include "recipes/_subscription_modal.html" %}
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/subscription.js') }}"></script>
 <script>
+wireUploadRecipeButton("uploadRecipeBtn");
+
 function toggleFav(btn, slug) {
   fetch(`/recipes/${slug}/favorite`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
     .then(r => r.json())
     .then(data => {
       btn.classList.toggle('fav-btn--active', data.favorited);
       btn.title = data.favorited ? 'Remove from favourites' : 'Add to favourites';
-      // Reload so the card moves between sections
       window.location.reload();
     });
 }

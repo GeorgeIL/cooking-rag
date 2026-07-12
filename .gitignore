@@ -20,3 +20,8 @@ __pycache__/
 
 # ── Setup script state ───────────────────────────────────────────────────────
 .aws-setup-state
+
+# ── Lambda build artifacts (vendored deps are regenerable via pip) ───────────
+lambda/**/package/
+lambda/**/*.zip
+lambda/**/response.json

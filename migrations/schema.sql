@@ -55,8 +55,9 @@ CREATE INDEX IF NOT EXISTS favorites_user_idx     ON favorites(user_id);
 -- ── Chat (one conversation per user, messages ordered by time) ────────────────
 
 CREATE TABLE IF NOT EXISTS conversations (
-    id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id          UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    agent_session_id UUID NOT NULL DEFAULT gen_random_uuid()
 );
 
 CREATE TABLE IF NOT EXISTS messages (
@@ -68,3 +69,29 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 CREATE INDEX IF NOT EXISTS messages_conv_time_idx ON messages(conversation_id, created_at);
+
+-- ── Cooking buddies (per-user contacts for recipe sharing) ─────────────────
+
+CREATE TABLE IF NOT EXISTS cooking_buddies (
+    id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name         VARCHAR(100) NOT NULL,
+    email        VARCHAR(255) NOT NULL,
+    picture_url  VARCHAR(1000) NOT NULL DEFAULT '',
+    created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, email)
+);
+
+CREATE INDEX IF NOT EXISTS cooking_buddies_user_idx ON cooking_buddies(user_id);
+
+-- ── Recipe images (overrides, generated, uploaded) ───────────────────────────
+
+CREATE TABLE IF NOT EXISTS recipe_images (
+    slug          VARCHAR(255) PRIMARY KEY,
+    image_url     VARCHAR(1000) NOT NULL DEFAULT '',
+    image_s3_key  VARCHAR(1000) NOT NULL DEFAULT '',
+    status        VARCHAR(20)  NOT NULL DEFAULT '',
+    cleared       BOOLEAN      NOT NULL DEFAULT FALSE,
+    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);

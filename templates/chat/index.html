@@ -50,16 +50,14 @@
         <div class="sidebar-panel" id="indexStatusPanel">
           {% if index_ready %}
           <div class="status-badge status-ok">
-            ✓ {{ chunk_count }} chunks indexed
+            ✓ {{ index_status.total_documents }} recipes indexed
+            ({{ index_status.catalog_count }} catalog + {{ index_status.user_count }} yours)
           </div>
           {% else %}
           <div class="status-badge status-error">
             ⚠ {{ index_error or 'Index not ready' }}
           </div>
           {% endif %}
-          <button class="btn-secondary btn-sm mt-8" onclick="reloadIndex()">
-            🔄 Rebuild index
-          </button>
         </div>
       </div>
 
@@ -127,6 +125,9 @@
   </div>
 </div>
 {% endblock %} {% block extra_js %}
+<script>
+  window.SAVED_RECIPE_TITLES = {{ saved_titles | default([]) | tojson }};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 <script>
@@ -137,6 +138,8 @@
   // use a separate renderer path and are unaffected.
   if (typeof marked !== "undefined") {
     marked.use({
+      gfm: true,
+      breaks: true,
       renderer: {
         codespan(text) {
           return text;
@@ -151,13 +154,11 @@
       params.get("q"),
     );
   }
-  // Render any existing assistant messages as markdown
-  document.querySelectorAll('[data-markdown="true"]').forEach((el) => {
-    el.innerHTML = marked.parse(el.textContent.trim());
-  });
-  // Attach "Add to Cookbook" buttons to any AI-generated recipes in history
+  // Render existing assistant messages and attach recipe save buttons
   document.querySelectorAll(".message--assistant").forEach((div) => {
-    attachRecipeButtons(div);
+    const contentEl = div.querySelector(".message-content[data-markdown='true']");
+    if (!contentEl) return;
+    mountAssistantContent(div, contentEl.textContent.trim());
   });
   // Scroll to bottom
   scrollToBottom();

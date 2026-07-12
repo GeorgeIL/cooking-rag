@@ -1,0 +1,73 @@
+openapi: 3.0.0
+info:
+  title: ChefAITools
+  version: 1.0.0
+  description: |
+    Two Bedrock Agent action tools (MCPs) for Smart Cookbook Chef AI.
+    Wire this schema to the action group Lambda (lmbda.py / dummy_lambda.lambda_handler).
+
+paths:
+  /suggestDishForTimeAndWeather:
+    post:
+      summary: Suggest recipes by time, weather, and location
+      description: |
+        Call when the user asks what to cook based on current time, weather, or a city.
+        Uses Meteosource weather + Bedrock Knowledge Base retrieval.
+      operationId: SuggestDishForTimeAndWeather
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - location
+              properties:
+                location:
+                  type: string
+                  description: City as Meteosource place_id (e.g. paris, london, tel-aviv)
+                meal_hint:
+                  type: string
+                  description: Optional preference (vegetarian, quick, comfort food, etc.)
+      responses:
+        "200":
+          description: Time, weather, and suggested cookbook recipe names
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /shareRecipeWithBuddy:
+    post:
+      summary: Email a recipe to a cooking buddy
+      description: |
+        Call when the user asks to send, share, or email a recipe to a buddy by name.
+        Use recipe text from the conversation or promptSessionAttributes last_recipe_*.
+      operationId: ShareRecipeWithBuddy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - buddy_name
+                - recipe_title
+                - recipe_body
+              properties:
+                buddy_name:
+                  type: string
+                  description: Buddy name — must match promptSessionAttributes.buddy_names
+                recipe_title:
+                  type: string
+                  description: Short recipe title
+                recipe_body:
+                  type: string
+                  description: Full recipe markdown (ingredients, steps) to email
+      responses:
+        "200":
+          description: Email queued via SES
+          content:
+            application/json:
+              schema:
+                type: object

@@ -25,3 +25,7 @@ pypdf>=4.0
 
 # Markdown rendering (used in routes/recipes.py)
 Markdown>=3.5
+
+# Gemini recipe image generation
+google-genai>=1.0
+Pillow>=10.0

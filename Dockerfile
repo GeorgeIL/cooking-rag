@@ -17,6 +17,7 @@ COPY . .
 
 # Config is provided at runtime with `--env-file` (see deploy.sh) rather than
 # baked into the image, so the same image works locally and on EC2 and never
-# carries secrets. AWS credentials come from the EC2 instance role.
+# carries secrets. AWS credentials come from the EC2 instance role; the Gemini
+# key is passed through the env file.
 EXPOSE 5001
 CMD ["python", "app.py"]

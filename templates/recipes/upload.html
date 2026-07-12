@@ -55,55 +55,13 @@
     </p>
   </form>
 </div>
+
+{% include "recipes/_subscription_modal.html" %}
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/subscription.js') }}"></script>
 <script>
-const fileInput   = document.getElementById('fileInput');
-const dropArea    = document.getElementById('dropArea');
-const selectedFile = document.getElementById('selectedFile');
-const fileNameEl  = document.getElementById('fileName');
-const submitBtn   = document.getElementById('submitBtn');
-const form        = document.getElementById('uploadForm');
-
-function showFile(file) {
-  fileNameEl.textContent = file.name;
-  selectedFile.style.display = 'flex';
-  dropArea.style.display = 'none';
-  submitBtn.disabled = false;
-}
-
-function clearFile() {
-  fileInput.value = '';
-  selectedFile.style.display = 'none';
-  dropArea.style.display = 'flex';
-  submitBtn.disabled = true;
-}
-
-fileInput.addEventListener('change', () => {
-  if (fileInput.files[0]) showFile(fileInput.files[0]);
-});
-
-dropArea.addEventListener('dragover', e => {
-  e.preventDefault();
-  dropArea.classList.add('drag-over');
-});
-dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
-dropArea.addEventListener('drop', e => {
-  e.preventDefault();
-  dropArea.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file) {
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    fileInput.files = dt.files;
-    showFile(file);
-  }
-});
-
-form.addEventListener('submit', () => {
-  submitBtn.disabled = true;
-  submitBtn.textContent = '⏳ Importing… this may take a few seconds';
-});
+wireUploadPagePaywall();
 </script>
 {% endblock %}

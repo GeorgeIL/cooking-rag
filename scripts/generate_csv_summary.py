@@ -3,6 +3,9 @@
 One-time script: generate a Markdown summary of the recipes.csv catalog using
 pandas, then upload it to S3 so the Bedrock Knowledge Base can index it.
 
+This produces metadata only (category counts, ratings). For searchable
+per-recipe RAG retrieval, use scripts/csv_to_catalog_md.py instead.
+
 Run from the project root:
     python scripts/generate_csv_summary.py
 

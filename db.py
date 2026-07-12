@@ -27,11 +27,15 @@ def _get_rds_client():
     return _rds_client
 
 
-def _auth_token() -> str:
-    """Return a cached IAM auth token, refreshing only when near expiry."""
+def _auth_token(force: bool = False) -> str:
+    """Return a cached IAM auth token, refreshing only when near expiry.
+
+    Pass force=True to bypass the cache after an authentication failure
+    (e.g. clock skew or a token that was rejected before its expected expiry).
+    """
     global _cached_token, _token_expires
     with _token_lock:
-        if _cached_token is None or time.monotonic() >= _token_expires:
+        if force or _cached_token is None or time.monotonic() >= _token_expires:
             _cached_token = _get_rds_client().generate_db_auth_token(
                 DBHostname=Config.RDS_HOST,
                 Port=Config.RDS_PORT,
@@ -39,6 +43,22 @@ def _auth_token() -> str:
             )
             _token_expires = time.monotonic() + 840  # 14 min
         return _cached_token
+
+
+def _sync_pool_password(pool, token: str | None = None) -> None:
+    """Keep the pool's connection factory password in sync with the current IAM token.
+
+    psycopg2's pool captures the password once at construction and reuses it for
+    every NEW physical connection it opens. IAM tokens expire after ~15 min, so
+    without this any connection the pool grows after expiry fails with
+    'PAM authentication failed'. Updating ``_kwargs['password']`` makes new
+    connections authenticate with a fresh token (existing live connections are
+    unaffected — auth happens only at connect time).
+    """
+    try:
+        pool._kwargs["password"] = token or _auth_token()
+    except Exception:
+        pass
 
 
 # ── Connection pool ───────────────────────────────────────────────────────────
@@ -70,11 +90,19 @@ def _get_pool() -> pg_pool.ThreadedConnectionPool:
 def _checkout() -> psycopg2.extensions.connection:
     """Get a healthy connection from the pool, replacing it if it's broken."""
     pool = _get_pool()
-    conn = pool.getconn()
+    # Ensure any NEW physical connection the pool opens uses a fresh IAM token.
+    _sync_pool_password(pool)
+    try:
+        conn = pool.getconn()
+    except psycopg2.OperationalError:
+        # Token was rejected (likely expired between refreshes or clock skew).
+        # Force a brand-new token, update the pool, and retry once.
+        _sync_pool_password(pool, _auth_token(force=True))
+        conn = pool.getconn()
     if conn.closed:
         # Replace dead connection
         try:
-            pool.putconn(conn)
+            pool.putconn(conn, close=True)
         except Exception:
             pass
         conn = psycopg2.connect(
@@ -129,6 +157,12 @@ def init_schema():
     try:
         with conn.cursor() as cur:
             cur.execute(sql)
+            cur.execute(
+                """
+                ALTER TABLE conversations
+                ADD COLUMN IF NOT EXISTS agent_session_id UUID NOT NULL DEFAULT gen_random_uuid()
+                """
+            )
         conn.commit()
     finally:
         _get_pool().putconn(conn)

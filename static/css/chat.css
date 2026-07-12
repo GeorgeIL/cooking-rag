@@ -179,6 +179,13 @@ body:has(.chat-layout) .page-wrapper {
   border: 1px solid #fecaca;
 }
 
+.index-sync-status,
+.sidebar-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted, #64748b);
+  margin: 0.25rem 0 0;
+}
+
 /* ── Chat main area ─────────────────────────────────────────────────────────── */
 .chat-main {
   flex: 1;
@@ -272,16 +279,21 @@ body:has(.chat-layout) .page-wrapper {
 .message--assistant .message-content h3 {
   font-family: var(--font-serif);
   color: var(--primary);
-  margin: 0.75rem 0 0.4rem;
+  font-weight: 700;
+  margin: 0.85rem 0 0.45rem;
 }
 .message--assistant .message-content h1 {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
 }
 .message--assistant .message-content h2 {
-  font-size: 1rem;
+  font-size: 1.05rem;
 }
 .message--assistant .message-content h3 {
-  font-size: 0.95rem;
+  font-size: 0.98rem;
+}
+.message--assistant .message-content h2:first-of-type {
+  margin-top: 0.5rem;
+  font-size: 1.12rem;
 }
 .message--assistant .message-content p {
   margin-bottom: 0.6rem;
@@ -296,6 +308,10 @@ body:has(.chat-layout) .page-wrapper {
 }
 .message--assistant .message-content strong {
   color: var(--primary);
+  font-weight: 700;
+}
+.message--assistant .message-content em {
+  color: var(--text-muted, inherit);
 }
 .message--assistant .message-content code {
   background: var(--bg);
@@ -465,4 +481,16 @@ body:has(.chat-layout) .page-wrapper {
   opacity: 0.65;
   cursor: not-allowed;
   transform: none;
+}
+.recipe-saved-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius, 8px);
+  background: color-mix(in srgb, var(--success, #2d6a4f) 14%, var(--surface));
+  color: var(--success, #2d6a4f);
+  font-size: 0.82rem;
+  font-weight: 600;
 }

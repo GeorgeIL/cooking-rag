@@ -1,8 +1,7 @@
 {% extends "base.html" %} {% block title %}{{ recipe.title }} — Smart Cookbook{%
-endblock %} {% block extra_css %}<link
-  rel="stylesheet"
-  href="{{ url_for('static', filename='css/recipes.css') }}"
-/>{% endblock %} {% block content %}
+endblock %} {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/recipes.css') }}" />
+{% endblock %} {% block content %}
 <div class="detail-header">
   <a href="{{ url_for('recipes.list_recipes') }}" class="back-link"
     >← All Recipes</a
@@ -14,6 +13,22 @@ endblock %} {% block extra_css %}<link
       title="Ask Chef AI about this recipe"
       >💬 Ask Chef AI</a
     >
+    <a
+      href="{{ url_for('buddies.buddies_page') }}?s3_key={{ recipe.s3_key | urlencode }}&amp;title={{ recipe.title | urlencode }}&amp;source={{ 'user' if recipe.author_username else 'catalog' }}"
+      class="btn-secondary"
+      title="Email this recipe to your cooking buddies"
+    >
+      📧 Share with buddies
+    </a>
+    {% if not recipe.image_url and recipe.image_status != 'pending' %}
+    <a
+      href="{{ url_for('recipes.edit_recipe_image', slug=recipe.slug) }}"
+      class="btn-secondary"
+      title="Add or manage this recipe photo"
+    >
+      🖼 Manage image
+    </a>
+    {% endif %}
     {% if is_author %}
     <a
       href="{{ url_for('recipes.edit_recipe', slug=recipe.slug) }}"
@@ -32,6 +47,33 @@ endblock %} {% block extra_css %}<link
   {% for tag in recipe.tags %}
   <span class="tag">{{ tag }}</span>
   {% endfor %}
+</div>
+{% endif %}
+
+{% if recipe.image_url %}
+<div class="recipe-detail-image-wrap">
+  <a
+    href="{{ url_for('recipes.edit_recipe_image', slug=recipe.slug) }}"
+    class="recipe-detail-image-link"
+    title="Manage recipe photo"
+  >
+    <img
+      class="recipe-detail-image"
+      src="{{ recipe.image_url }}"
+      alt="{{ recipe.title }}"
+      loading="lazy"
+    />
+  </a>
+</div>
+{% elif recipe.image_status == 'pending' %}
+<div
+  class="recipe-detail-image-wrap recipe-detail-image-wrap--pending"
+  id="recipeImageWrap"
+  data-slug="{{ recipe.slug }}"
+  data-image-pending="true"
+  data-image-title="{{ recipe.title }}"
+>
+  {% include "recipes/_ai_image_loader.html" %}
 </div>
 {% endif %}
 
@@ -54,5 +96,6 @@ endblock %} {% block extra_css %}<link
       deleteRecipe(deleteBtn.dataset.slug),
     );
   }
+  initRecipeDetailImagePoll();
 </script>
 {% endblock %}

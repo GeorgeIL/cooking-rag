@@ -2,7 +2,8 @@
 
 **Your fridge, your questions, real recipes.** A RAG-powered kitchen assistant:
 tell it what you've got, ask what to cook, and get answers grounded in your own
-cookbook — not generic internet mush. Built on Flask + **AWS Bedrock (Nova
+cookbook — not generic internet mush. Every recipe even gets an **AI-generated
+photo** (Google Gemini "Nano Banana"). Built on Flask + **AWS Bedrock (Nova
 Lite)**, Aurora PostgreSQL, and a Bedrock Knowledge Base, with **one-command**
 infrastructure setup and deploy.
 
@@ -21,6 +22,9 @@ infrastructure setup and deploy.
   Uploads are parsed into structured recipes by the LLM.
 - **Smart pantry** — track what you have; the assistant prioritises recipes you
   can actually make right now.
+- **AI recipe photos** — each recipe gets a generated food photo via Google
+  Gemini (asynchronous; stored in S3). Or upload your own / paste a URL.
+- **Cooking buddies** — share recipes with friends by email (SES + Lambda).
 - **Auto-updating retrieval** — every recipe change re-syncs the Bedrock
   Knowledge Base, so search stays current.
 
@@ -54,7 +58,8 @@ Deployment: Docker container on EC2 Ubuntu 24.04 — IAM instance role, no store
 | Database      | Aurora PostgreSQL 17 (IAM token auth)      | Users, recipes, pantry, conversations           |
 | Retrieval     | Amazon Bedrock Knowledge Base              | Semantic search over S3 recipe `.md` files      |
 | LLM           | Amazon Nova Lite 1.0 (Bedrock Converse)    | Chat, recipe generation, upload parsing         |
-| Storage       | Amazon S3                                  | Recipe markdown + KB data source                |
+| Images        | Google Gemini (`gemini-3.1-flash-image`)   | AI-generated recipe photos → S3                 |
+| Storage       | Amazon S3                                  | Recipe markdown, images, KB data source         |
 | Frontend      | Jinja2 + vanilla JS + marked.js            | Chat UI, recipe CRUD, pantry, dark mode         |
 | Deploy        | Docker on EC2 Ubuntu 24.04 (t3.micro)      | IAM instance role provides all AWS credentials  |
 
@@ -66,8 +71,10 @@ Everything below is scripted. You fill in a handful of values; the scripts creat
 every AWS resource and wire the IDs back into your config.
 
 **Prerequisites:** an AWS account, the [AWS CLI](https://docs.aws.amazon.com/cli/)
-configured, Docker, an EC2 key pair, and Bedrock **model access enabled** for
-*Nova Lite* and *Titan Text Embeddings V2* (Bedrock console → Model access).
+configured, Docker, an EC2 key pair, Bedrock **model access enabled** for *Nova
+Lite* and *Titan Text Embeddings V2* (Bedrock console → Model access), and a
+[**Google Gemini API key**](https://aistudio.google.com/apikey) for recipe
+images (the app runs without it — images are simply skipped).
 
 ```bash
 # 1. Configure — copy the template and fill in the <...> values
@@ -109,9 +116,13 @@ cooking-rag/
 ├── db.py                  # Aurora connection pool + IAM token cache
 ├── auth_utils.py          # JWT helpers
 ├── rag/engine.py          # retrieve_chunks(), ask_chef(), sync_knowledge_base()
-├── routes/                # auth, chat, recipes, pantry blueprints
+├── services/              # recipe_images (Gemini), s3_recipes, bedrock_agent,
+│                          #   buddy_share, recipe_from_chat, recipe_lookup
+├── routes/                # auth, chat, recipes, pantry, buddies blueprints
 ├── migrations/schema.sql  # CREATE TABLE IF NOT EXISTS — applied on startup
-├── data/recipes/          # Seed recipes uploaded to S3 by setup_aws.sh
+├── data/                  # recipes.csv seed catalog (+ seed .md for setup)
+├── lambda/buddy_email/    # SES email Lambda for cooking-buddy sharing
+├── scripts/               # Bedrock Agent + catalog maintenance utilities
 ├── static/ · templates/   # CSS/JS · Jinja2 HTML
 ├── Dockerfile
 ├── setup_aws.sh           # ← provisions the entire AWS stack from .env
