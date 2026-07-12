@@ -489,20 +489,33 @@ def _suggest_dish_for_time_and_weather(event: Dict[str, Any]) -> str:
     location = _resolve_location(event)
     meal_hint = (_param_value(event, "meal_hint") or "").strip()
 
-    if not location:
-        raise ValueError(
-            "Location is required. Pass a location parameter or mention a city "
-            "(e.g. 'recipe for Paris')."
-        )
+    # Weather/location are OPTIONAL context here — never a hard requirement. If the
+    # agent passes a missing or placeholder location (e.g. "unknown"), or the
+    # weather API fails, we MUST still return a useful suggestion. An errored tool
+    # response can poison the agent session and make it apologise repeatedly, so
+    # this function is designed to never raise.
+    if location and location.strip().lower() in ("unknown", "none", "n/a", ""):
+        location = None
 
     now = datetime.now()
     period_name, meal_type = _meal_period(now.hour)
-    summary, temp = _fetch_weather(location)
+
+    summary = temp = None
+    if location:
+        try:
+            summary, temp = _fetch_weather(location)
+        except Exception as exc:  # noqa: BLE001 — weather is best-effort context
+            logger.warning(
+                "Weather lookup failed for %r (continuing without it): %s",
+                location,
+                exc,
+            )
+            summary = temp = None
 
     query_parts = [
         "recipes for",
-        summary,
-        f"{temp}C",
+        summary or "",
+        f"{temp}C" if temp is not None else "",
         period_name,
         meal_type,
         meal_hint,
@@ -514,10 +527,16 @@ def _suggest_dish_for_time_and_weather(event: Dict[str, Any]) -> str:
     lines = [
         f"Current date and time: {now.strftime('%Y-%m-%d %H:%M:%S')}",
         f"Meal period: {period_name} ({meal_type})",
-        f"Weather in {location}: {summary}, {temp}°C.",
     ]
+    if location and summary is not None:
+        lines.append(f"Weather in {location}: {summary}, {temp}°C.")
+    else:
+        lines.append(
+            "Weather: unavailable — ignore weather and suggest based on the "
+            "pantry, meal preference, and time of day."
+        )
     if meal_hint:
-        lines.append(f"Meal preference: {meal_hint}.")
+        lines.append(f"Meal preference / pantry: {meal_hint}.")
 
     if titles:
         lines.append("Suggested cookbook recipes (names only — use KB for full details):")
@@ -525,7 +544,8 @@ def _suggest_dish_for_time_and_weather(event: Dict[str, Any]) -> str:
             lines.append(f"{idx}. {title}")
     else:
         lines.append(
-            "No matching recipes found in the knowledge base for this context."
+            "No matching cookbook recipes for this context; answer from the "
+            "pantry and general culinary knowledge."
         )
 
     return "\n".join(lines)
