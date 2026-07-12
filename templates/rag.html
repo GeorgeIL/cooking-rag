@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RAG Assistant</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/rag.css') }}"
+    />
+  </head>
+  <body>
+    <div class="layout">
+      <!-- ── Sidebar ── -->
+      <aside class="sidebar">
+        <div class="sidebar-top">
+          <h2>🔍 RAG Assistant</h2>
+          <p class="caption">Retrieval-Augmented Generation</p>
+        </div>
+
+        <hr />
+
+        {% if hf_model %}
+        <div class="info-block">
+          <span class="label">Embedding model</span>
+          <code>{{ hf_model }}</code>
+        </div>
+        <div class="info-block">
+          <span class="label">Language model</span>
+          <code>{{ gemini_model }}</code>
+        </div>
+        <div class="info-block">
+          <span class="label">Top-K retrieval</span>
+          <code>{{ top_k }}</code>
+        </div>
+        <div class="info-block">
+          <span class="label">Data folder</span>
+          <code>{{ data_folder }}/</code>
+        </div>
+
+        <hr />
+
+        <button class="btn-reload" id="reloadBtn" onclick="reloadDocs()">
+          🔄&nbsp; Reload documents
+        </button>
+
+        <hr />
+
+        <div class="upload-section">
+          <p class="section-title">📂 Add a Document</p>
+          <p class="caption">
+            Upload a <strong>.txt</strong> or <strong>.pdf</strong> file to the
+            knowledge base.
+          </p>
+
+          <!--
+          Plain HTML label + hidden input — always clickable,
+          no framework wrapper, no z-index or pointer-events issues.
+        -->
+          <label class="upload-btn" for="fileInput">
+            ⬆&nbsp; Browse files
+            <input
+              type="file"
+              id="fileInput"
+              accept=".txt,.pdf"
+              onchange="uploadFile(this)"
+            />
+          </label>
+
+          <p class="upload-status" id="uploadStatus"></p>
+        </div>
+        {% endif %}
+      </aside>
+
+      <!-- ── Main chat ── -->
+      <main class="chat-area">
+        <div class="chat-header">
+          <h2>
+            Ask Your Documents
+            <span class="badge-ready">● Ready</span>
+          </h2>
+          <p class="chunk-info" id="chunkInfo">
+            {{ chunk_count }} text chunk{{ 's' if chunk_count != 1 else '' }}
+            indexed &middot; embeddings via Hugging Face &middot; answers via
+            Gemini
+          </p>
+        </div>
+
+        {% if error %}
+        <div class="error-banner">⚠&nbsp; {{ error }}</div>
+        {% endif %}
+
+        <div class="messages" id="messages">
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">💬</div>
+            <p>Ask anything about your documents.</p>
+          </div>
+        </div>
+
+        <div class="input-row">
+          <input
+            type="text"
+            id="chatInput"
+            placeholder="Ask something about your documents…"
+            onkeydown="
+              if (event.key === 'Enter' && !event.shiftKey) sendMessage();
+            "
+            {%
+            if
+            error
+            %}disabled{%
+            endif
+            %}
+            autocomplete="off"
+          />
+          <button
+            id="sendBtn"
+            onclick="sendMessage()"
+            {%
+            if
+            error
+            %}disabled{%
+            endif
+            %}
+          >
+            Send
+          </button>
+        </div>
+      </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/rag.js') }}"></script>
+  </body>
+</html>

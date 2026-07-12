@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Upload Recipe — Smart Cookbook{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/recipes.css') }}" />
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>📄 Upload Recipe</h1>
+    <p class="page-subtitle">Import a recipe from a PDF or text file, Chef AI will structure it automatically.</p>
+  </div>
+  <a href="{{ url_for('recipes.list_recipes') }}" class="btn-secondary">← Back to Recipes</a>
+</div>
+
+{% if error %}
+<div class="alert alert--error upload-alert">
+  <span class="upload-alert-icon">⚠️</span>
+  <div>
+    <strong>Import failed</strong>
+    <p>{{ error }}</p>
+  </div>
+</div>
+{% endif %}
+
+<div class="upload-card">
+  <form method="POST" enctype="multipart/form-data" id="uploadForm">
+    <!-- Drop zone -->
+    <div class="upload-drop-area" id="dropArea">
+      <div class="upload-icon">📄</div>
+      <p class="upload-label">
+        Drop your file here, or
+        <label for="fileInput" class="upload-browse">browse</label>
+      </p>
+      <p class="upload-hint">Accepts .pdf and .txt · Max 10 MB</p>
+      <input type="file" id="fileInput" name="file" accept=".pdf,.txt" class="upload-input-hidden" />
+    </div>
+
+    <!-- Selected file indicator -->
+    <div class="upload-selected" id="selectedFile" style="display:none">
+      <span class="upload-file-icon">📎</span>
+      <span id="fileName"></span>
+      <button type="button" class="btn-ghost btn-sm" onclick="clearFile()">✕ Remove</button>
+    </div>
+
+    <div class="upload-actions">
+      <button type="submit" class="btn-primary btn-upload" id="submitBtn" disabled>
+        ✨ Import with Chef AI
+      </button>
+    </div>
+
+    <p class="upload-note">
+      Chef AI reads your file and automatically extracts the title, ingredients, steps, and tags.
+      You can edit the result after importing.
+    </p>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const fileInput   = document.getElementById('fileInput');
+const dropArea    = document.getElementById('dropArea');
+const selectedFile = document.getElementById('selectedFile');
+const fileNameEl  = document.getElementById('fileName');
+const submitBtn   = document.getElementById('submitBtn');
+const form        = document.getElementById('uploadForm');
+
+function showFile(file) {
+  fileNameEl.textContent = file.name;
+  selectedFile.style.display = 'flex';
+  dropArea.style.display = 'none';
+  submitBtn.disabled = false;
+}
+
+function clearFile() {
+  fileInput.value = '';
+  selectedFile.style.display = 'none';
+  dropArea.style.display = 'flex';
+  submitBtn.disabled = true;
+}
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) showFile(fileInput.files[0]);
+});
+
+dropArea.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropArea.classList.add('drag-over');
+});
+dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
+dropArea.addEventListener('drop', e => {
+  e.preventDefault();
+  dropArea.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
+    showFile(file);
+  }
+});
+
+form.addEventListener('submit', () => {
+  submitBtn.disabled = true;
+  submitBtn.textContent = '⏳ Importing… this may take a few seconds';
+});
+</script>
+{% endblock %}

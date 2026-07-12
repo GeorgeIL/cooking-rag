@@ -1,0 +1,145 @@
+{% extends "base.html" %} {% block title %}{{ 'Edit Recipe' if action == 'edit'
+else 'New Recipe' }} — Smart Cookbook{% endblock %} {% block extra_css %}<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/recipes.css') }}"
+/>{% endblock %} {% block content %}
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('recipes.list_recipes') }}" class="back-link"
+      >← All Recipes</a
+    >
+    <h1>{{ '✏️ Edit Recipe' if action == 'edit' else '➕ New Recipe' }}</h1>
+  </div>
+</div>
+
+<div class="alert" id="alert" style="display: none"></div>
+
+<form id="recipeForm" class="recipe-form" novalidate>
+  <!-- Basic info -->
+  <section class="form-section">
+    <h2>Basic Information</h2>
+    <div class="form-group">
+      <label for="title">Recipe Title <span class="required">*</span></label>
+      <input
+        type="text"
+        id="title"
+        placeholder="e.g. Classic Spaghetti Carbonara"
+        value="{{ recipe.title if recipe else '' }}"
+        required
+      />
+    </div>
+    <div class="form-group">
+      <label for="description">Description</label>
+      <textarea
+        id="description"
+        rows="3"
+        placeholder="A short description of your recipe…"
+      >
+{{ recipe.description if recipe else '' }}</textarea
+      >
+    </div>
+    <div class="form-group">
+      <label for="tags">Tags <small>(comma-separated)</small></label>
+      <input
+        type="text"
+        id="tags"
+        placeholder="pasta, italian, quick"
+        value="{{ recipe.tags | join(', ') if recipe and recipe.tags else '' }}"
+      />
+    </div>
+  </section>
+
+  <!-- Ingredients -->
+  <section class="form-section">
+    <h2>Ingredients <span class="required">*</span></h2>
+    <div id="ingredients-list">
+      {% if recipe and recipe.ingredients %} {% for ing in recipe.ingredients %}
+      <div class="dynamic-row">
+        <span class="row-icon">·</span>
+        <input
+          type="text"
+          class="ingredient-input"
+          placeholder="e.g. 200g spaghetti"
+          value="{{ ing }}"
+        />
+        <button
+          type="button"
+          class="btn-remove"
+          onclick="removeRow(this)"
+          title="Remove"
+        >
+          ✕
+        </button>
+      </div>
+      {% endfor %} {% endif %}
+    </div>
+    <button type="button" class="btn-add" onclick="addIngredient()">
+      + Add Ingredient
+    </button>
+  </section>
+
+  <!-- Steps -->
+  <section class="form-section">
+    <h2>Steps <span class="required">*</span></h2>
+    <div id="steps-list">
+      {% if recipe and recipe.steps %} {% for step in recipe.steps %}
+      <div class="dynamic-row">
+        <span class="step-number">{{ loop.index }}</span>
+        <textarea class="step-input" rows="2" placeholder="Describe this step…">
+{{ step }}</textarea
+        >
+        <button
+          type="button"
+          class="btn-remove"
+          onclick="removeStep(this)"
+          title="Remove"
+        >
+          ✕
+        </button>
+      </div>
+      {% endfor %} {% endif %}
+    </div>
+    <button type="button" class="btn-add" onclick="addStep()">
+      + Add Step
+    </button>
+  </section>
+
+  <!-- Notes -->
+  <section class="form-section">
+    <h2>Notes <small>(optional)</small></h2>
+    <div class="form-group">
+      <textarea
+        id="notes"
+        rows="4"
+        placeholder="Special tips, variations, storage instructions…"
+      >
+{{ recipe.notes if recipe else '' }}</textarea
+      >
+    </div>
+  </section>
+
+  <div class="form-actions">
+    <a href="{{ url_for('recipes.list_recipes') }}" class="btn-secondary"
+      >Cancel</a
+    >
+    <button type="submit" class="btn-primary" id="submitBtn">
+      {{ 'Save Changes' if action == 'edit' else 'Create Recipe' }}
+    </button>
+  </div>
+</form>
+{% endblock %} {% block extra_js %}
+<script src="{{ url_for('static', filename='js/recipes.js') }}"></script>
+<script>
+  const ACTION = "{{ action }}";
+  const SLUG = '{{ recipe.slug if recipe else "" }}';
+
+  // Add initial rows if form is empty (new recipe)
+  if (!document.querySelector(".ingredient-input")) addIngredient();
+  if (!document.querySelector(".step-input")) addStep();
+
+  document.getElementById("recipeForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    saveRecipe(ACTION, SLUG);
+  });
+</script>
+{% endblock %}

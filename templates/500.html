@@ -1,0 +1,11 @@
+{% extends "base.html" %} {% block title %}Server Error — Smart Cookbook{%
+endblock %} {% block content %}
+<div class="error-page">
+  <div class="error-emoji">🔥</div>
+  <h1>500 — Something went wrong</h1>
+  <p>The kitchen is on fire. Please try again.</p>
+  <a href="{{ url_for('recipes.list_recipes') }}" class="btn-primary"
+    >Back to Safety</a
+  >
+</div>
+{% endblock %}

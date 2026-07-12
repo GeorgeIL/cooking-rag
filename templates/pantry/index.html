@@ -1,0 +1,70 @@
+{% extends "base.html" %} {% block title %}My Pantry — Smart Cookbook{% endblock
+%} {% block extra_css %}<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/recipes.css') }}"
+/>{% endblock %} {% block content %}
+<div class="page-header">
+  <div>
+    <h1>🛒 My Pantry</h1>
+    <p class="page-subtitle">Track what ingredients you have at home</p>
+  </div>
+  <a
+    href="{{ url_for('chat.chat_page') }}?q=What+can+I+cook+with+my+current+pantry+ingredients%3F"
+    class="btn-primary"
+  >
+    💬 Find recipes with my pantry
+  </a>
+</div>
+
+<div class="alert" id="alert" style="display: none"></div>
+
+<!-- Add ingredient form -->
+<div class="pantry-add-row">
+  <input
+    type="text"
+    id="ingredientInput"
+    placeholder="e.g. garlic, olive oil, chicken breast…"
+    onkeydown="
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        addIngredient();
+      }
+    "
+  />
+  <button class="btn-primary" onclick="addIngredient()">Add</button>
+</div>
+
+<!-- Ingredient list -->
+<div class="pantry-list" id="pantryList">
+  {% if not pantry %}
+  <div class="empty-state" id="emptyState">
+    <div class="empty-emoji">🥕</div>
+    <h2>Your pantry is empty</h2>
+    <p>Add ingredients you have at home so Chef AI can recommend recipes!</p>
+  </div>
+  {% else %}
+  <div id="emptyState" style="display: none"></div>
+  {% endif %} {% for item in pantry %}
+  <div class="pantry-item" id="item-{{ loop.index }}">
+    <span class="pantry-item-name">{{ item }}</span>
+    <button
+      class="btn-remove-icon"
+      onclick="removeIngredient('{{ item }}', this)"
+      title="Remove"
+    >
+      ✕
+    </button>
+  </div>
+  {% endfor %}
+</div>
+
+{% if pantry %}
+<div class="pantry-footer">
+  <span class="pantry-count" id="pantryCount"
+    >{{ pantry|length }} ingredient{{ 's' if pantry|length != 1 else '' }}</span
+  >
+  <button class="btn-ghost btn-sm" onclick="clearPantry()">Clear all</button>
+</div>
+{% endif %} {% endblock %} {% block extra_js %}
+<script src="{{ url_for('static', filename='js/pantry.js') }}"></script>
+{% endblock %}

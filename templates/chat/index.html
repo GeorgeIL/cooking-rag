@@ -1,0 +1,194 @@
+{% extends "base.html" %} {% block title %}Chef AI — Smart Cookbook{% endblock
+%} {% block extra_css %}<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/chat.css') }}"
+/>{% endblock %} {% block content %}
+<div class="chat-layout">
+  <!-- Sidebar -->
+  <div class="sidebar-wrapper" id="sidebarWrapper">
+    <aside class="chat-sidebar">
+      <h2>💬 Chef AI</h2>
+      <p class="sidebar-subtitle">Your personal culinary assistant</p>
+
+      <div class="sidebar-section">
+        <button class="sidebar-toggle" aria-expanded="true" aria-controls="quickActionsPanel">
+          <span>Quick questions</span>
+          <span class="sidebar-toggle-icon">▾</span>
+        </button>
+        <div class="sidebar-panel" id="quickActionsPanel">
+          <div class="quick-actions">
+            <button class="quick-btn" onclick="fillQuestion('What can I cook with my current pantry ingredients?')">
+              🛒 Cook with my pantry
+            </button>
+            <button
+              class="quick-btn"
+              onclick="fillQuestion('Show me all the recipes in the cookbook')"
+            >
+              📖 Browse all recipes
+            </button>
+            <button
+              class="quick-btn"
+              onclick="fillQuestion('Give me a quick and easy dinner idea')"
+            >
+              ⚡ Quick dinner idea
+            </button>
+            <button
+              class="quick-btn"
+              onclick="fillQuestion('What are some healthy breakfast options?')"
+            >
+              🥗 Healthy breakfast
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <button class="sidebar-toggle" aria-expanded="true" aria-controls="indexStatusPanel">
+          <span>Index status</span>
+          <span class="sidebar-toggle-icon">▾</span>
+        </button>
+        <div class="sidebar-panel" id="indexStatusPanel">
+          {% if index_ready %}
+          <div class="status-badge status-ok">
+            ✓ {{ chunk_count }} chunks indexed
+          </div>
+          {% else %}
+          <div class="status-badge status-error">
+            ⚠ {{ index_error or 'Index not ready' }}
+          </div>
+          {% endif %}
+          <button class="btn-secondary btn-sm mt-8" onclick="reloadIndex()">
+            🔄 Rebuild index
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <button class="btn-ghost btn-sm" onclick="clearHistory()">
+          🗑 Clear history
+        </button>
+      </div>
+    </aside>
+    <!-- Pull tab to collapse / expand the entire sidebar -->
+    <button class="sidebar-pull-tab" id="sidebarPullTab" title="Toggle sidebar" aria-label="Toggle sidebar">
+      <span class="sidebar-pull-tab-icon">◀</span>
+    </button>
+  </div>
+
+  <!-- Chat area -->
+  <div class="chat-main">
+    <div class="messages-container" id="messagesContainer">
+      {% if not messages %}
+      <div class="welcome-message">
+        <div class="welcome-emoji">👨‍🍳</div>
+        <h3>Hello! I'm Chef AI</h3>
+        <p>
+          Ask me about recipes, ingredients, cooking techniques, or what you can
+          make with what you have at home.
+        </p>
+      </div>
+      {% else %} {% for msg in messages %}
+      <div class="message message--{{ msg.role }}">
+        <div class="message-bubble">
+          <div class="message-content" {% if msg.role == "assistant" %}data-markdown="true"{% endif %}>
+            {{ msg.content }}
+          </div>
+        </div>
+        <span class="message-role"
+          >{{ '👤 You' if msg.role == 'user' else '👨‍🍳 Chef AI' }}</span
+        >
+      </div>
+      {% endfor %} {% endif %}
+    </div>
+
+    <div class="chat-input-area">
+      <div class="alert" id="alert" style="display: none"></div>
+      <div class="input-row">
+        <textarea
+          id="questionInput"
+          placeholder="Ask Chef AI anything… e.g. 'What can I substitute for buttermilk?'"
+          rows="1"
+          oninput="autoResize(this)"
+          onkeydown="handleKeyDown(event)"
+        ></textarea>
+        <button
+          class="btn-send"
+          id="sendBtn"
+          onclick="sendMessage()"
+          title="Send (Enter)"
+        >
+          ➤
+        </button>
+      </div>
+      <p class="input-hint">
+        Press <kbd>Enter</kbd> to send · <kbd>Shift+Enter</kbd> for new line
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script>
+  // Gemini sometimes wraps its opening sentence in single backticks for
+  // emphasis, which marked.js renders as <code> — creating a monospace
+  // visual bug on the first line of every reply. Override the inline-code
+  // renderer to emit plain text instead. Fenced code blocks (```recipe-json```)
+  // use a separate renderer path and are unaffected.
+  if (typeof marked !== "undefined") {
+    marked.use({
+      renderer: {
+        codespan(text) {
+          return text;
+        },
+      },
+    });
+  }
+  // Pre-fill question from URL param (e.g., from recipe detail link)
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("q")) {
+    document.getElementById("questionInput").value = decodeURIComponent(
+      params.get("q"),
+    );
+  }
+  // Render any existing assistant messages as markdown
+  document.querySelectorAll('[data-markdown="true"]').forEach((el) => {
+    el.innerHTML = marked.parse(el.textContent.trim());
+  });
+  // Attach "Add to Cookbook" buttons to any AI-generated recipes in history
+  document.querySelectorAll(".message--assistant").forEach((div) => {
+    attachRecipeButtons(div);
+  });
+  // Scroll to bottom
+  scrollToBottom();
+
+  // Collapsible sidebar sections (individual panels)
+  document.querySelectorAll(".sidebar-toggle").forEach((btn) => {
+    const panelId = btn.getAttribute("aria-controls");
+    const panel = document.getElementById(panelId);
+    const savedKey = "sidebar-" + panelId;
+    // Restore saved state
+    if (localStorage.getItem(savedKey) === "collapsed") {
+      panel.style.display = "none";
+      btn.setAttribute("aria-expanded", "false");
+    }
+    btn.addEventListener("click", () => {
+      const isOpen = btn.getAttribute("aria-expanded") === "true";
+      btn.setAttribute("aria-expanded", isOpen ? "false" : "true");
+      panel.style.display = isOpen ? "none" : "";
+      localStorage.setItem(savedKey, isOpen ? "collapsed" : "open");
+    });
+  });
+
+  // Collapsible entire sidebar (pull tab)
+  const sidebarWrapper = document.getElementById("sidebarWrapper");
+  const pullTab = document.getElementById("sidebarPullTab");
+  if (localStorage.getItem("sidebar-collapsed") === "true") {
+    sidebarWrapper.classList.add("collapsed");
+  }
+  pullTab.addEventListener("click", () => {
+    const isCollapsed = sidebarWrapper.classList.toggle("collapsed");
+    localStorage.setItem("sidebar-collapsed", isCollapsed);
+  });
+</script>
+{% endblock %}

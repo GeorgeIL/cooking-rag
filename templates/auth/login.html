@@ -1,0 +1,58 @@
+{% extends "base.html" %} {% block title %}Login — Smart Cookbook{% endblock %}
+{% block extra_css %}<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/auth.css') }}"
+/>{% endblock %} {% block content %}
+<div class="auth-card">
+  <div class="auth-header">
+    <span class="auth-logo">🍳</span>
+    <h1>Welcome back</h1>
+    <p>Sign in to your cookbook</p>
+  </div>
+
+  <div class="alert" id="alert" style="display: none"></div>
+
+  <form id="loginForm" novalidate>
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        placeholder="chef@example.com"
+        autocomplete="email"
+        required
+      />
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        placeholder="••••••••"
+        autocomplete="current-password"
+        required
+      />
+    </div>
+    <button type="submit" class="btn-primary btn-full" id="submitBtn">
+      Sign In
+    </button>
+  </form>
+
+  <p class="auth-switch">
+    Don't have an account?
+    <a href="{{ url_for('auth.signup_page') }}">Create one</a>
+  </p>
+</div>
+{% endblock %} {% block extra_js %}
+<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+<script>
+  setupAuthForm(
+    "loginForm",
+    '{{ url_for("auth.login_post") }}',
+    "submitBtn",
+    "alert",
+  );
+</script>
+{% endblock %}

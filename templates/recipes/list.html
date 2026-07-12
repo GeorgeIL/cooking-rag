@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Recipes — Smart Cookbook{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/recipes.css') }}" />
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>📖 Recipes</h1>
+    <p class="page-subtitle">
+      {{ recipes|length }} recipe{{ 's' if recipes|length != 1 else '' }} in your cookbook
+    </p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{{ url_for('recipes.upload_recipe_page') }}" class="btn-secondary">📄 Upload Recipe</a>
+    <a href="{{ url_for('recipes.new_recipe') }}" class="btn-primary">+ Add Recipe</a>
+  </div>
+</div>
+
+{% if not recipes %}
+<div class="empty-state">
+  <div class="empty-emoji">📝</div>
+  <h2>No recipes yet</h2>
+  <p>Start building your cookbook by adding your first recipe.</p>
+  <a href="{{ url_for('recipes.new_recipe') }}" class="btn-primary">Add Your First Recipe</a>
+</div>
+
+{% else %}
+
+<!-- Sort bar -->
+<div class="sort-bar">
+  <span class="sort-label">Sort by:</span>
+  <div class="sort-options">
+    <a href="?sort=latest"  class="sort-btn {% if current_sort == 'latest' %}sort-btn--active{% endif %}">Latest</a>
+    <a href="?sort=oldest"  class="sort-btn {% if current_sort == 'oldest' %}sort-btn--active{% endif %}">Oldest</a>
+    <a href="?sort=az"      class="sort-btn {% if current_sort == 'az'     %}sort-btn--active{% endif %}">A → Z</a>
+    <a href="?sort=za"      class="sort-btn {% if current_sort == 'za'     %}sort-btn--active{% endif %}">Z → A</a>
+  </div>
+</div>
+
+{% set fav_recipes   = recipes | selectattr('slug', 'in', favorites) | list %}
+{% set other_recipes = recipes | rejectattr('slug', 'in', favorites) | list %}
+
+<!-- Favourites section -->
+{% if fav_recipes %}
+<section class="recipes-section">
+  <h2 class="recipes-section-title">⭐ Favourites</h2>
+  <div class="recipe-grid">
+    {% for recipe in fav_recipes %}
+    {% include "recipes/_card.html" %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- All / remaining recipes -->
+<section class="recipes-section">
+  {% if fav_recipes %}<h2 class="recipes-section-title">All Recipes</h2>{% endif %}
+  {% if other_recipes %}
+  <div class="recipe-grid">
+    {% for recipe in other_recipes %}
+    {% include "recipes/_card.html" %}
+    {% endfor %}
+  </div>
+  {% elif not fav_recipes %}
+  <p class="text-muted">No recipes found.</p>
+  {% endif %}
+</section>
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleFav(btn, slug) {
+  fetch(`/recipes/${slug}/favorite`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(r => r.json())
+    .then(data => {
+      btn.classList.toggle('fav-btn--active', data.favorited);
+      btn.title = data.favorited ? 'Remove from favourites' : 'Add to favourites';
+      // Reload so the card moves between sections
+      window.location.reload();
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Smart Cookbook{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/main.css') }}"
+    />
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body>
+    {% if current_user %}
+    <nav class="navbar">
+      <a class="navbar-brand" href="{{ url_for('recipes.list_recipes') }}">
+        🍳 Smart Cookbook
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+        ☰
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li>
+          <a
+            href="{{ url_for('recipes.list_recipes') }}"
+            class="{% if request.blueprint == 'recipes' %}active{% endif %}"
+          >
+            📖 Recipes
+          </a>
+        </li>
+        <li>
+          <a
+            href="{{ url_for('chat.chat_page') }}"
+            class="{% if request.blueprint == 'chat' %}active{% endif %}"
+          >
+            💬 Chef AI
+          </a>
+        </li>
+        <li>
+          <a
+            href="{{ url_for('pantry.pantry_page') }}"
+            class="{% if request.blueprint == 'pantry' %}active{% endif %}"
+          >
+            🛒 Pantry
+          </a>
+        </li>
+        <li class="nav-user">
+          <span class="nav-username">👤 {{ current_user.username }}</span>
+          <button class="btn-dark-mode" id="darkModeBtn" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+          <form
+            action="{{ url_for('auth.logout') }}"
+            method="post"
+            style="display: inline"
+          >
+            <button type="submit" class="btn-logout">Logout</button>
+          </form>
+        </li>
+      </ul>
+    </nav>
+    {% endif %}
+
+    <div
+      class="page-wrapper {% if not current_user %}page-wrapper--auth{% endif %}"
+    >
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %}
+      <div class="flash-container">
+        {% for category, message in messages %}
+        <div class="flash flash--{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %} {% endwith %} {% block content %}{% endblock %}
+    </div>
+
+    <script>
+      // Mobile nav toggle
+      const toggle = document.getElementById("navToggle");
+      const links = document.getElementById("navLinks");
+      if (toggle)
+        toggle.addEventListener("click", () => links.classList.toggle("open"));
+
+      // Dark mode toggle (persisted via localStorage)
+      const darkBtn = document.getElementById("darkModeBtn");
+      const applyTheme = (dark) => {
+        document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+        if (darkBtn) darkBtn.textContent = dark ? "☀️" : "🌙";
+      };
+      const saved = localStorage.getItem("theme");
+      applyTheme(saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches));
+      if (darkBtn) {
+        darkBtn.addEventListener("click", () => {
+          const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+          localStorage.setItem("theme", isDark ? "light" : "dark");
+          applyTheme(!isDark);
+        });
+      }
+    </script>
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

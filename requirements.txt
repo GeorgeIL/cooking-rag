@@ -1,0 +1,27 @@
+# Smart Cookbook - direct dependencies only.
+# Transitive dependencies are resolved automatically by pip.
+
+# Web framework
+Flask>=3.1
+
+# Database
+psycopg2-binary>=2.9
+
+# Auth
+PyJWT>=2.8
+bcrypt>=4.1
+
+# Environment / config
+python-dotenv>=1.0
+
+# AWS
+boto3>=1.34
+
+# Data processing (CSV catalog summary)
+pandas>=2.0
+
+# PDF upload parsing
+pypdf>=4.0
+
+# Markdown rendering (used in routes/recipes.py)
+Markdown>=3.5

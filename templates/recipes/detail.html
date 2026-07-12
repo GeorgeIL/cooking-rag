@@ -1,0 +1,58 @@
+{% extends "base.html" %} {% block title %}{{ recipe.title }} — Smart Cookbook{%
+endblock %} {% block extra_css %}<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/recipes.css') }}"
+/>{% endblock %} {% block content %}
+<div class="detail-header">
+  <a href="{{ url_for('recipes.list_recipes') }}" class="back-link"
+    >← All Recipes</a
+  >
+  <div class="detail-actions">
+    <a
+      href="{{ url_for('chat.chat_page') }}?q=Tell me about {{ recipe.title | urlencode }}"
+      class="btn-secondary"
+      title="Ask Chef AI about this recipe"
+      >💬 Ask Chef AI</a
+    >
+    {% if is_author %}
+    <a
+      href="{{ url_for('recipes.edit_recipe', slug=recipe.slug) }}"
+      class="btn-secondary"
+      >✏️ Edit</a
+    >
+    <button class="btn-danger" id="deleteBtn" data-slug="{{ recipe.slug }}">
+      🗑 Delete
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+{% if recipe.tags %}
+<div class="recipe-tags detail-tags">
+  {% for tag in recipe.tags %}
+  <span class="tag">{{ tag }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<article class="recipe-content markdown-body">
+  {{ html_content | safe }}
+</article>
+
+<div class="detail-meta">
+  <span>Added by <strong>{{ recipe.author_username }}</strong></span>
+  {% if recipe.created_at %}
+  <span>· {{ recipe.created_at.strftime('%B %d, %Y') }}</span>
+  {% endif %}
+</div>
+{% endblock %} {% block extra_js %}
+<script src="{{ url_for('static', filename='js/recipes.js') }}"></script>
+<script>
+  const deleteBtn = document.getElementById("deleteBtn");
+  if (deleteBtn) {
+    deleteBtn.addEventListener("click", () =>
+      deleteRecipe(deleteBtn.dataset.slug),
+    );
+  }
+</script>
+{% endblock %}

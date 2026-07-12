@@ -1,0 +1,34 @@
+<div class="recipe-card-wrapper">
+  <button
+    class="fav-btn {% if recipe.slug in favorites %}fav-btn--active{% endif %}"
+    onclick="event.preventDefault(); event.stopPropagation(); toggleFav(this, '{{ recipe.slug }}')"
+    title="{{ 'Remove from favourites' if recipe.slug in favorites else 'Add to favourites' }}"
+    aria-label="Favourite"
+  >★</button>
+  <a class="recipe-card" href="{{ url_for('recipes.view_recipe', slug=recipe.slug) }}">
+    <div class="recipe-card-header">
+      <h2 class="recipe-card-title">{{ recipe.title }}</h2>
+      {% if recipe.author_username %}
+      <span class="recipe-card-author">by {{ recipe.author_username }}</span>
+      {% endif %}
+    </div>
+    {% if recipe.description %}
+    <p class="recipe-card-desc">
+      {{ recipe.description[:120] }}{% if recipe.description|length > 120 %}…{% endif %}
+    </p>
+    {% endif %}
+    {% if recipe.tags %}
+    <div class="recipe-tags">
+      {% for tag in recipe.tags[:4] %}
+      <span class="tag">{{ tag }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="recipe-card-footer">
+      <span class="recipe-card-date">
+        {{ recipe.created_at.strftime('%b %d, %Y') if recipe.created_at else '' }}
+      </span>
+      <span class="recipe-card-arrow">→</span>
+    </div>
+  </a>
+</div>
