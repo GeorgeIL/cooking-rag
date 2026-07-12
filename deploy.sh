@@ -102,11 +102,13 @@ ok "running at $PUBLIC_IP"
 
 log "waiting for the app to boot (installs Docker + builds image, ~3-5 min)…"
 URL="http://${PUBLIC_IP}:5001"
+code=000
 for i in $(seq 1 60); do
-  code="$(curl -s -o /dev/null -m 4 -w '%{http_code}' "$URL/" 2>/dev/null || echo 000)"
+  code="$(curl -s -o /dev/null -m 4 -w '%{http_code}' "$URL/" 2>/dev/null)"; code="${code:-000}"
   if [[ "$code" != "000" ]]; then ok "app responded (HTTP $code) after ~$((i*15))s"; break; fi
   sleep 15
 done
+[[ "$code" == "000" ]] && die "app did not respond after ~15 min — check: ssh ubuntu@${PUBLIC_IP} 'sudo docker logs ${PROJECT}'"
 
 echo
 printf '%s\n' "${c_g}${c_b}Deployed 🎉  →  ${URL}${c_0}"
