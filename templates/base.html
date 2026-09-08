@@ -4,6 +4,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}Smart Cookbook{% endblock %}</title>
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="{{ url_for('static', filename='img/favicon-32x32.png') }}"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="{{ url_for('static', filename='img/favicon-16x16.png') }}"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="{{ url_for('static', filename='img/apple-touch-icon.png') }}"
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -20,7 +37,14 @@
     {% if current_user %}
     <nav class="navbar">
       <a class="navbar-brand" href="{{ url_for('recipes.list_recipes') }}">
-        🍳 Smart Cookbook
+        <img
+          class="navbar-brand-logo"
+          src="{{ url_for('static', filename='img/smart-cookbook-logo.png') }}"
+          alt=""
+          width="36"
+          height="36"
+        />
+        <span>Smart Cookbook</span>
       </a>
       <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
         ☰
