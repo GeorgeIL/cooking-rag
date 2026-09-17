@@ -87,35 +87,54 @@ def _get_pool() -> pg_pool.ThreadedConnectionPool:
     return _pool
 
 
-def _checkout() -> psycopg2.extensions.connection:
-    """Get a healthy connection from the pool, replacing it if it's broken."""
-    pool = _get_pool()
-    # Ensure any NEW physical connection the pool opens uses a fresh IAM token.
-    _sync_pool_password(pool)
-    try:
-        conn = pool.getconn()
-    except psycopg2.OperationalError:
-        # Token was rejected (likely expired between refreshes or clock skew).
-        # Force a brand-new token, update the pool, and retry once.
-        _sync_pool_password(pool, _auth_token(force=True))
-        conn = pool.getconn()
+# Aurora Serverless v2 auto-pauses after 5 idle minutes. A pause silently kills
+# every pooled connection (conn.closed stays 0, the next query dies with "SSL
+# connection has been closed unexpectedly"), and resuming takes ~20-80 s, far
+# longer than one 10 s connect_timeout. So ping each checkout and keep retrying
+# fresh connections until the cluster is back.
+_RESUME_WAIT_SECONDS = 90
+
+
+def _is_alive(conn) -> bool:
     if conn.closed:
-        # Replace dead connection
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+        conn.rollback()
+        return True
+    except Exception:
+        return False
+
+
+def _checkout() -> psycopg2.extensions.connection:
+    """Get a healthy connection from the pool, replacing broken ones and
+    waiting out an Aurora auto-pause resume."""
+    pool = _get_pool()
+    deadline = time.monotonic() + _RESUME_WAIT_SECONDS
+    force_token = False
+    while True:
+        # Ensure any NEW physical connection the pool opens uses a fresh IAM token.
+        _sync_pool_password(pool, _auth_token(force=True) if force_token else None)
+        try:
+            conn = pool.getconn()
+        except psycopg2.OperationalError:
+            # Connect timed out (cluster resuming) or the token was rejected.
+            if time.monotonic() >= deadline:
+                raise
+            force_token = True
+            time.sleep(2)
+            continue
+        if _is_alive(conn):
+            conn.cursor_factory = psycopg2.extras.RealDictCursor
+            return conn
+        # Stale connection from before a pause: drop it and try again.
         try:
             pool.putconn(conn, close=True)
         except Exception:
             pass
-        conn = psycopg2.connect(
-            host=Config.RDS_HOST,
-            port=Config.RDS_PORT,
-            dbname=Config.RDS_DB,
-            user=Config.RDS_USER,
-            password=_auth_token(),
-            sslmode="require",
-            connect_timeout=10,
-        )
-    conn.cursor_factory = psycopg2.extras.RealDictCursor
-    return conn
+        if time.monotonic() >= deadline:
+            raise psycopg2.OperationalError("database unavailable (still resuming?)")
 
 
 def get_db():
